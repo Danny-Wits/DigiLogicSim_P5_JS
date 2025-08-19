@@ -1,7 +1,19 @@
 function setup() {
-  createCanvas(400, 400);
+  const menu = document.getElementById("menu");
+  const canvas = createCanvas(
+    windowWidth - menu.getBoundingClientRect().width,
+    windowHeight
+  );
+  canvas.mouseClicked(canvasClicked);
+}
+function windowResized() {
+  const menu = document.getElementById("menu");
+  resizeCanvas(windowWidth - menu.getBoundingClientRect().width, windowHeight);
 }
 
 function draw() {
-  background(220);
+  background(255);
+}
+function canvasClicked() {
+  
 }
