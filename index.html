@@ -14,10 +14,24 @@
 
   <body>
     <div class="container">
-      <div id="menu"></div>
+      <div id="menu">
+        <div class="info">
+          <h4>Selected Gate</h4>
+          <div id="selectedGate"></div>
+        </div>
+        <div class="info">
+          <h4>Available Gates</h4>
+          <div id="availableGates"></div>
+        </div>
+        <div class="info controls">
+          <h4>Controls</h4>
+          <button id="wireButton" onclick="setWire()">Wire Mode</button>
+          <div id="selectedPin"></div>
+        </div>
+      </div>
       <main></main>
     </div>
-
+    <script src="src/logicgate.js"></script>
     <script src="sketch.js"></script>
   </body>
 </html>
