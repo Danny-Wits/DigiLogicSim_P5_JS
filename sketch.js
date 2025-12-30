@@ -1,38 +1,45 @@
-const logicGates = [];
-const wires = [];
-let selectedInput = null;
+let logicGates = [];
+let wires = [];
 let selectedGate = null;
-let isWireOn = false;
-let defaultGates = [
-  new LogicGate("NOT", [0], [1]),
-  new LogicGate("AND", [0, 1], [2]),
-];
+let selectedPin = null;
+let wireMode = false;
+let defaultGates;
 
 //Storing state in local storage and retrieving it
-window.addEventListener("beforeunload", () => {
-  localStorage.setItem("logicGates", JSON.stringify(logicGates, null, 2));
-  localStorage.setItem("wires", JSON.stringify(wires, null, 3));
-  console.log("saved");
-});
-window.addEventListener("load", () => {
-  console.log("loaded");
-  const loadedGates = JSON.parse(localStorage.getItem("logicGates")) || [];
-  const loadedWires = JSON.parse(localStorage.getItem("wires")) || [];
-  if (loadedGates && loadedGates.length > 0) {
-    loadedGates.forEach((gate) => {
-      logicGates.push(createLogicGate(gate));
-    });
-  } else logicGates.push(...defaultGates);
+// window.addEventListener("beforeunload", () => {
+//   localStorage.setItem("logicGates", JSON.stringify(logicGates, null, 2));
+//   localStorage.setItem("wires", JSON.stringify(wires, null, 3));
+//   console.log("saved");
+// });
+// window.addEventListener("load", () => {
+//   console.log("loaded");
+//   const loadedGates = JSON.parse(localStorage.getItem("logicGates")) || [];
+//   const loadedWires = JSON.parse(localStorage.getItem("wires")) || [];
+//   if (loadedGates && loadedGates.length > 0) {
+//     loadedGates.forEach((gate) => {
+//       logicGates.push(createLogicGate(gate));
+//     });
+//   } else logicGates.push(...defaultGates);
 
-  if (loadedWires && loadedWires.length > 0) {
-    loadedWires.forEach((wire) => {
-      wires.push(createWire(wire));
-    });
-  }
-  console.log(wires);
-});
+//   if (loadedWires && loadedWires.length > 0) {
+//     loadedWires.forEach((wire) => {
+//       wires.push(createWire(wire));
+//     });
+//   }
+//   console.log(wires);
+// });
 
 function setup() {
+  defaultGates = [
+    new Not(50, 50),
+    new Not(50, 50),
+    new Not(50, 50),
+    new AND(500, 500),
+    new InputSwitch(100, 100),
+    new InputSwitch(100, 100),
+    new OutputSwitch(500, 500),
+  ];
+  logicGates.push(...defaultGates);
   const menu = document.getElementById("menu");
   const canvas = createCanvas(
     windowWidth - menu.getBoundingClientRect().width,
@@ -48,145 +55,75 @@ function windowResized() {
 
 function draw() {
   background(10);
+  wires.forEach((wire) => {
+    wire.show();
+  });
   logicGates.forEach((gate) => {
     gate.show();
   });
-  for (const element of wires) {
-    element.show();
+}
+function getCollidingComponent(mouseX, mouseY) {
+  const x = mouseX;
+  const y = mouseY;
+  const mouse = new pCircle(x, y, 2, "#000000ff");
+  for (const gate of logicGates) {
+    for (const component of gate.getComponents()) {
+      if (collision_engine.checkCollision(mouse, component)) {
+        return component;
+      }
+    }
   }
+}
+
+function deleteWire(pin) {
+  let didDelete = false;
+  wires = wires.filter((wire) => {
+    if (wire.p1 === pin || wire.p2 === pin) {
+      wire.p2.setState(null);
+      didDelete = true;
+      return false;
+    }
+    return true;
+  });
+  return didDelete;
 }
 function canvasClicked() {
-  if (isWireOn) {
-    if (!selectedInput) {
-      selectedInput = detectCollisionWithPins();
-      console.log(selectedInput);
-
-      showSelectedPin();
+  const component = getCollidingComponent(mouseX, mouseY);
+  if (selectedPin && wireMode && component instanceof Pin) {
+    if (selectedPin === component) return;
+    if (selectedPin.parent === component.parent) return;
+    if (selectedPin.type === component.type) return;
+    wires.push(new Wire(selectedPin, component));
+    selectedPin = null;
+    wireMode = false;
+  } else if (component instanceof Pin) {
+    if (deleteWire(component)) {
+      selectedPin = null;
+      wireMode = false;
     } else {
-      let secondInput = detectCollisionWithPins();
-      if (secondInput && secondInput.gate == selectedInput.gate) return;
-
-      if (secondInput) {
-        wires.push(
-          new Wire(
-            selectedInput.gate,
-            secondInput.gate,
-            selectedInput.index,
-            secondInput.index,
-            selectedInput.input,
-            secondInput.input
-          )
-        );
-      }
-      selectedInput = secondInput;
-      showSelectedPin();
-      selectedInput = null;
+      selectedPin = component;
+      wireMode = true;
     }
-    return;
-  }
-  if (selectedGate) selectedGate = null;
-  else selectedGate = detectCollisionWithGates();
-  showSelectedGate();
-}
-
-function detectCollisionWithGates() {
-  let x = mouseX;
-  let y = mouseY;
-  for (let i = 0; i < logicGates.length; i++) {
-    if (
-      x > logicGates[i].mesh.x &&
-      x < logicGates[i].mesh.x + logicGates[i].mesh.w &&
-      y > logicGates[i].mesh.y &&
-      y < logicGates[i].mesh.y + logicGates[i].mesh.h
-    ) {
-      return logicGates[i];
-    }
-  }
-}
-function detectCollisionWithPins() {
-  let click = createVector(mouseX, mouseY);
-  for (let i = 0; i < logicGates.length; i++) {
-    let gate = logicGates[i];
-    let inputPinPositions = gate.getInputPositions();
-
-    for (let j = 0; j < inputPinPositions.length; j++) {
-      let center = createVector(gate.mesh.x, inputPinPositions[j]);
-      if (INPUT_SIZE > click.dist(center)) {
-        return { gate: gate, index: j, input: true };
-      }
-    }
-    let outputPinPositions = gate.getOutputPositions();
-    for (let j = 0; j < outputPinPositions.length; j++) {
-      let center = createVector(
-        gate.mesh.x + gate.mesh.w,
-        outputPinPositions[j]
-      );
-      if (OUTPUT_SIZE > click.dist(center)) {
-        return { gate: gate, index: j, input: false };
-      }
-    }
-  }
-  return null;
-}
-function canvasDragged() {
-  if (selectedGate) {
-    selectedGate.mesh.x = mouseX - selectedGate.mesh.w / 2;
-    selectedGate.mesh.y = mouseY - selectedGate.mesh.h / 2;
-  }
-  if (isWireOn) {
-  }
-}
-function showSelectedGate() {
-  if (selectedGate) {
-    document.getElementById("selectedGate").innerText = selectedGate.name;
-  }
-}
-function showSelectedPin() {
-  if (selectedInput) {
-    document.getElementById("selectedPin").innerText = pinToName(selectedInput);
-  }
-}
-function pinToName(pin) {
-  return pin.gate.name + " " + (pin.input ? "IN" : "OUT") + pin.index;
-}
-
-function setWire() {
-  const button = select("#wireButton");
-  if (isWireOn) {
-    isWireOn = false;
-    button.removeClass("on");
   } else {
-    isWireOn = true;
-    selectedGate = null;
-    button.addClass("on");
+    selectedPin = null;
+    wireMode = false;
+  }
+  console.log(selectedPin, wireMode);
+
+  if (component instanceof InputSwitch) {
+    component.toggle();
   }
 }
-function createLogicGate(gate) {
-  return new LogicGate(
-    gate.name,
-    gate.inputs,
-    gate.outputs,
-    new Mesh(gate.mesh.x, gate.mesh.y, gate.mesh.w, gate.mesh.h, gate.mesh.name)
-  );
-}
-function getLogicGate(gate) {
-  for (let i = 0; i < logicGates.length; i++) {
-    let e = logicGates[i];
-    if (
-      e.name == gate.name &&
-      e.mesh.x == gate.mesh.x &&
-      e.mesh.y == gate.mesh.y
-    )
-      return e;
+
+function canvasDragged() {
+  if (mouseIsPressed) {
+    const component = getCollidingComponent(mouseX, mouseY);
+    if (component instanceof LogicGate) {
+      selectedGate = component;
+    }
+    if (selectedGate) {
+      selectedGate.setX(mouseX - selectedGate.w / 2);
+      selectedGate.setY(mouseY - selectedGate.h / 2);
+    }
   }
-}
-function createWire(wire) {
-  return new Wire(
-    getLogicGate(wire.g1),
-    getLogicGate(wire.g2),
-    wire.g1Index,
-    wire.g2Index,
-    wire.g1Input,
-    wire.g2Input
-  );
 }

@@ -1,99 +1,118 @@
-const COLOR = { inactive: "red", active: "lime" };
-const INPUT_SIZE = 15;
-const OUTPUT_SIZE = 15;
-class LogicGate {
-  constructor(name, inputs, outputs, mesh = null) {
+const PIN_SIZE = 6;
+const GAP = 20;
+const UNCONNECTED = "rgba(131, 131, 131, 1)";
+const CONNECTED = "rgba(209, 230, 255, 1)";
+const CONNECTED_ACTIVE = "rgba(255, 103, 103, 1)";
+const INPUT = "input";
+const OUTPUT = "output";
+class Pin extends pCircle {
+  constructor(parent, x, y, r, color, type = "input") {
+    super(x, y, r, color);
+    this.parent = parent;
+    this.state = null;
+    this.type = type;
+  }
+  setState(state) {
+    this.state = state;
+    this.drawColor = state ? CONNECTED_ACTIVE : CONNECTED;
+  }
+}
+
+class LogicGate extends pRect {
+  constructor(x, y, name, inputs, outputs, color = "#277dfeff") {
+    let larger = Math.max(inputs, outputs);
+    super(
+      x,
+      y,
+      textWidth(name) * 2.5,
+      larger * PIN_SIZE + (larger + 1) * GAP,
+      color,
+      name
+    );
     this.name = name;
-    this.inputs = inputs;
-    this.outputs = outputs;
-    if (mesh) {
-      this.mesh = mesh;
-    } else {
-      this.createMesh();
-    }
+    this.input_count = inputs;
+    this.outputs_count = outputs;
+    this.create();
   }
 
-  createMesh() {
-    let larger = Math.max(this.inputs.length, this.outputs.length);
-    this.mesh = new Mesh(0, 0, 100, Math.max(50, larger * 25), this.name);
+  create() {
+    this.input_pins = [];
+    const offsetI = this.h / (this.input_count + 1);
+    for (let i = 1; i <= this.input_count; i++) {
+      this.input_pins.push(
+        new Pin(
+          this,
+          this.x,
+          this.y + i * offsetI,
+          PIN_SIZE,
+          UNCONNECTED,
+          INPUT
+        )
+      );
+    }
+    this.output_pins = [];
+    const offsetO = this.h / (this.outputs_count + 1);
+    for (let i = 1; i <= this.outputs_count; i++) {
+      this.output_pins.push(
+        new Pin(
+          this,
+          this.x + this.w,
+          this.y + i * offsetO,
+          PIN_SIZE,
+          UNCONNECTED,
+          OUTPUT
+        )
+      );
+    }
+  }
+  update() {
+    const offsetI = this.h / (this.input_count + 1);
+    for (const pin of this.input_pins) {
+      pin.x = this.x;
+      pin.y = this.y + (this.input_pins.indexOf(pin) + 1) * offsetI;
+    }
+    const offsetO = this.h / (this.outputs_count + 1);
+    for (const pin of this.output_pins) {
+      pin.x = this.x + this.w;
+      pin.y = this.y + (this.output_pins.indexOf(pin) + 1) * offsetO;
+    }
+  }
+  getComponents() {
+    return [...this.input_pins, ...this.output_pins, this];
+  }
+  getPins() {
+    return [...this.input_pins, ...this.output_pins];
   }
   show() {
     this.calculate();
-    this.mesh.show(this.inputs, this.outputs);
+    this.getPins().forEach((pin) => pin.show());
+    super.show();
   }
-  getInputPositions() {
-    return this.mesh.getPositionsFromArray(this.inputs);
+  setX(x) {
+    this.x = x;
+    this.update();
   }
-  getOutputPositions() {
-    return this.mesh.getPositionsFromArray(this.outputs);
+  setY(y) {
+    this.y = y;
+    this.update();
   }
   calculate() {}
 }
 
-class Mesh {
-  constructor(x, y, w = 50, h = 50, name) {
-    this.x = x;
-    this.y = y;
-    this.w = w;
-    this.h = h;
-    this.name = name;
-  }
-
-  show(inputs, outputs) {
-    fill(255);
-    rect(this.x, this.y, this.w, this.h, 6);
-    fill(0);
-    textSize(18);
-    text(
-      this.name,
-      this.x + this.w / 2 - textWidth(this.name) / 2,
-      this.y + this.h / 2 + 5
-    );
-    stroke(255);
-    const input_positions = this.getPositionsFromArray(inputs);
-    for (let i = 0; i < inputs.length; i++) {
-      fill(inputs[i] == 0 ? COLOR["inactive"] : COLOR["active"]);
-      circle(this.x, input_positions[i], INPUT_SIZE);
-    }
-
-    const output_positions = this.getPositionsFromArray(outputs);
-    for (let i = 0; i < outputs.length; i++) {
-      fill(outputs[i] == 0 ? COLOR["inactive"] : COLOR["active"]);
-      circle(this.x + this.w, output_positions[i], OUTPUT_SIZE);
-    }
-  }
-  getPositionsFromArray(arr) {
-    const positions = [];
-    const increment = this.h / (arr.length + 1);
-    for (let i = 0; i < arr.length; i++) {
-      positions.push(this.y + increment * (i + 1));
-    }
-    return positions;
-  }
-}
 class Wire {
-  constructor(g1, g2, g1Index, g2Index, g1Input, g2Input) {
-    this.g1 = g1;
-    this.g2 = g2;
-    this.g1Index = g1Index;
-    this.g2Index = g2Index;
-    this.g1Input = g1Input;
-    this.g2Input = g2Input;
+  constructor(p1, p2) {
+    this.p1 = p1.type === OUTPUT ? p1 : p2;
+    this.p2 = p1.type === OUTPUT ? p2 : p1;
   }
   show() {
-    strokeWeight(8);
-    stroke("red");
-    line(
-      this.g1.mesh.x + (this.g1Input ? 0 : this.g1.mesh.w),
-      this.g1Input
-        ? this.g1.getInputPositions()[this.g1Index]
-        : this.g1.getOutputPositions()[this.g1Index],
-      this.g2.mesh.x + (this.g2Input ? 0 : this.g2.mesh.w),
-      this.g2Input
-        ? this.g2.getInputPositions()[this.g2Index]
-        : this.g2.getOutputPositions()[this.g2Index]
-    );
+    this.calculate();
+    strokeWeight(4);
+    stroke(this.p1.state ? CONNECTED_ACTIVE : CONNECTED);
+    line(this.p1.x, this.p1.y, this.p2.x, this.p2.y);
     strokeWeight(2);
     stroke("white");
+  }
+  calculate() {
+    this.p2.setState(this.p1.state);
   }
 }
