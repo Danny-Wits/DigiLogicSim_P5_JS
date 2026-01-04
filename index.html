@@ -21,12 +21,21 @@
         </div>
         <div class="info">
           <h4>Available Gates</h4>
+          <div class="flex">
+            <button onclick="addGate('AND')">AND</button>
+            <button onclick="addGate('NOT')">NOT</button>
+            <button onclick="addGate('I')">INPUT</button>
+            <button onclick="addGate('O')">OUTPUT</button>
+          </div>
           <div id="availableGates"></div>
         </div>
         <div class="info controls">
           <h4>Controls</h4>
-          <button id="wireButton" onclick="setWire()">Wire Mode</button>
-          <div id="selectedPin"></div>
+          <div class="flex">
+            <button onclick="wrapToGate()">Wrap</button>
+            <button onclick="saveState()">Save</button>
+            <button onclick="clearSim()">Clear</button>
+          </div>
         </div>
       </div>
       <main></main>
