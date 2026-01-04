@@ -5,12 +5,6 @@ let selectedGate = null;
 let selectedPin = null;
 let deployableGate = null;
 
-setInterval(() => {
-  console.log({
-    selectedGate: selectedGate ? selectedGate.id : null,
-    selectedPin: selectedPin ? selectedPin.id : null,
-  });
-}, 5000);
 function saveState() {
   localStorage.setItem("logicGates", JSON.stringify(logicGates, null, 2));
   localStorage.setItem("wires", JSON.stringify(wires, null, 3));
