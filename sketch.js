@@ -43,7 +43,6 @@ function load() {
 }
 
 function setup() {
-  load();
   const menu = document.getElementById("menu");
   const canvas = createCanvas(
     windowWidth - menu.getBoundingClientRect().width,
@@ -51,6 +50,7 @@ function setup() {
   );
   canvas.mouseClicked(canvasClicked);
   canvas.mouseMoved(canvasDragged);
+  load();
 }
 function windowResized() {
   const menu = document.getElementById("menu");
