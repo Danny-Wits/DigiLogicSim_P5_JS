@@ -42,3 +42,14 @@ class AND extends LogicGate {
     );
   }
 }
+
+class OR extends LogicGate {
+  constructor(x, y) {
+    super(x, y, "OR", 2, 1, "lime");
+  }
+  calculate() {
+    this.output_pins[0].setState(
+      this.input_pins[0].state || this.input_pins[1].state
+    );
+  }
+}

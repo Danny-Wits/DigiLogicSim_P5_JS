@@ -1,3 +1,5 @@
+//TODO : ADD save logic for custom gates and add them to the html option
+
 let logicGates = [];
 let wires = [];
 let customGates = [];
@@ -137,6 +139,7 @@ function keyPressed() {
 function addGate(name) {
   deployableGate = getGate(name);
   if (!deployableGate) return;
+  selectedGate = null;
   document.getElementById("selectedGate").innerHTML = name;
   document.getElementById(
     "selectedGate"
@@ -146,6 +149,8 @@ function getGate(name) {
   switch (name) {
     case "AND":
       return new AND(0, 0);
+    case "OR":
+      return new OR(0, 0);
     case "NOT":
       return new NOT(0, 0);
     case "I":
